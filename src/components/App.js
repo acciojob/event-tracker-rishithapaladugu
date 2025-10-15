@@ -1,172 +1,82 @@
-import React, { useState } from "react";
-import { Calendar, momentLocalizer } from "react-big-calendar";
-import moment from "moment";
-import "react-big-calendar/lib/css/react-big-calendar.css";
-import "../styles/App.css";
+// Calendar.js (partial)
+import React, { useState } from 'react';
+import moment from 'moment';
+import BigCalendar from 'react-big-calendar';
+import Popup from 'react-popup';
 
-const localizer = momentLocalizer(moment);
+moment.locale('en');
+const localizer = BigCalendar.momentLocalizer(moment);
 
-const App = () => {
+const EventCalendar = () => {
   const [events, setEvents] = useState([]);
-  const [filter, setFilter] = useState("All");
+  const [showCreatePopup, setShowCreatePopup] = useState(false);
+  const [showEditDeletePopup, setShowEditDeletePopup] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [filterType, setFilterType] = useState('all'); // 'all', 'past', 'upcoming'
 
-  // Create Event Modal state
-  const [createEventOpen, setCreateEventOpen] = useState(false);
-  const [newEventDate, setNewEventDate] = useState(null);
-  const [newTitle, setNewTitle] = useState("");
-  const [newLocation, setNewLocation] = useState("");
-
-  // Edit/Delete Modal state
-  const [modalEvent, setModalEvent] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [titleInput, setTitleInput] = useState("");
-
-  // Handle selecting a calendar date (for creating new event)
   const handleSelectSlot = ({ start }) => {
-    setNewEventDate(start);
-    setNewTitle("");
-    setNewLocation("");
-    setCreateEventOpen(true);
+    setSelectedDate(start);
+    setShowCreatePopup(true);
   };
 
-  // Handle selecting an existing event (edit/delete)
   const handleSelectEvent = (event) => {
-    setModalEvent(event);
-    setTitleInput(event.title);
-    setModalOpen(true);
+    setSelectedEvent(event);
+    setShowEditDeletePopup(true);
   };
 
-  // Save edited event
-  const saveEvent = () => {
-    setEvents(
-      events.map((ev) =>
-        ev.id === modalEvent.id ? { ...ev, title: titleInput } : ev
-      )
-    );
-    setModalOpen(false);
+  const eventPropGetter = (event) => {
+    const isPast = moment(event.end).isBefore(moment());
+    return {
+      style: {
+        backgroundColor: isPast ? 'rgb(222, 105, 135)' : 'rgb(140, 189, 76)',
+      },
+    };
   };
 
-  // Delete event
-  const deleteEvent = () => {
-    setEvents(events.filter((ev) => ev.id !== modalEvent.id));
-    setModalOpen(false);
-  };
-
-  // Filter events based on button
-  const filteredEvents = events.filter((ev) => {
-    if (filter === "Past") return ev.isPast;
-    if (filter === "Upcoming") return !ev.isPast;
+  const filteredEvents = events.filter(event => {
+    if (filterType === 'all') return true;
+    const isPast = moment(event.end).isBefore(moment());
+    if (filterType === 'past') return isPast;
+    if (filterType === 'upcoming') return !isPast;
     return true;
   });
 
   return (
-    <div style={{ margin: "20px" }}>
-      {/* Filter Buttons */}
-      <div style={{ marginBottom: "10px" }}>
-        <button className="btn" onClick={() => setFilter("All")}>
-          All
-        </button>
-        <button className="btn" onClick={() => setFilter("Past")}>
-          Past
-        </button>
-        <button className="btn" onClick={() => setFilter("Upcoming")}>
-          Upcoming
-        </button>
+    <div>
+      <div className="filter-buttons">
+        <button className="btn" onClick={() => setFilterType('all')}>All</button>
+        <button className="btn" onClick={() => setFilterType('past')}>Past</button>
+        <button className="btn" onClick={() => setFilterType('upcoming')}>Upcoming</button>
       </div>
-
-      {/* Calendar */}
-      <Calendar
+      <BigCalendar
         localizer={localizer}
         events={filteredEvents}
-        startAccessor="start"
-        endAccessor="end"
-        style={{ height: 500 }}
         selectable
         onSelectSlot={handleSelectSlot}
         onSelectEvent={handleSelectEvent}
-        eventPropGetter={(event) => ({
-          className: event.isPast ? "past-event" : "upcoming-event",
-        })}
+        eventPropGetter={eventPropGetter}
+        // ... other props
       />
-
-{/* Create Event Modal */}
-{createEventOpen && (
-  <div className="modal-overlay">
-    <div className="modal-box">
-      <h3>Create Event</h3>
-      <input
-        placeholder="Event Title"
-        value={newTitle}
-        onChange={(e) => setNewTitle(e.target.value)}
-      />
-      <input
-        placeholder="Event Location"
-        value={newLocation}
-        onChange={(e) => setNewLocation(e.target.value)}
-      />
-      <div className="mm-popup__box__footer__right-space">
-        <button
-          className="mm-popup__btn mm-popup__btn--save-create"
-          onClick={() => {
-            if (!newTitle) return alert("Event Title required");
-            setEvents([
-              ...events,
-              {
-                id: new Date().getTime(),
-                title: newTitle,
-                location: newLocation,
-                start: newEventDate,
-                end: newEventDate,
-                isPast: newEventDate < new Date(),
-              },
-            ]);
-            setCreateEventOpen(false);
-          }}
+      {/* Create Event Popup */}
+      {showCreatePopup && (
+        <Popup
+          // ... popup props
         >
-          Save
-        </button>
-        <button
-          className="mm-popup__btn mm-popup__btn--cancel-create"
-          onClick={() => setCreateEventOpen(false)}
+          {/* Event creation form */}
+        </Popup>
+      )}
+      {/* Edit/Delete Event Popup */}
+      {showEditDeletePopup && (
+        <Popup
+          // ... popup props
         >
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-{/* Edit/Delete Modal */}
-{modalOpen && (
-  <div className="modal-overlay">
-    <div className="modal-box">
-      <h3>Edit Event</h3>
-      <input
-        placeholder="Event Title"
-        value={titleInput}
-        onChange={(e) => setTitleInput(e.target.value)}
-      />
-      <div className="mm-popup__box__footer__right-space">
-        <button
-          className="mm-popup__btn mm-popup__btn--save-edit"
-          onClick={saveEvent}
-        >
-          Save
-        </button>
-        <button
-          className="mm-popup__btn mm-popup__btn--delete-edit"
-          onClick={deleteEvent}
-        >
-          Delete
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+          {/* Event edit/delete options */}
+        </Popup>
+      )}
     </div>
   );
 };
 
-export default App;
+export default EventCalendar;
 
